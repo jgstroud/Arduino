@@ -7,7 +7,7 @@
 
 #include <memory>
 
-//#define DEBUG_UPDATER Serial
+#define DEBUG_UPDATER Serial
 
 #include <Updater_Signing.h>
 #ifndef ARDUINO_SIGNING
@@ -169,11 +169,11 @@ bool UpdaterClass::begin(size_t size, int command, int ledPin, uint8_t ledOn) {
   _startAddress = updateStartAddress;
   _currentAddress = _startAddress;
   _size = size;
-  if (ESP.getFreeHeap() > 2 * FLASH_SECTOR_SIZE) {
-    _bufferSize = FLASH_SECTOR_SIZE;
-  } else {
+  //if (ESP.getFreeHeap() > 2 * FLASH_SECTOR_SIZE) {
+  //  _bufferSize = FLASH_SECTOR_SIZE;
+  //} else {
     _bufferSize = 256;
-  }
+  //}
   _buffer = new (std::nothrow) uint8_t[_bufferSize];
   if (!_buffer) {
     _setError(UPDATE_ERROR_OOM);
@@ -466,6 +466,47 @@ size_t UpdaterClass::write(uint8_t *data, size_t len) {
   return len;
 }
 
+size_t UpdaterClass::rawVerify(uint8_t *data, size_t len) {
+  if(hasError() || !isRunning())
+    return 0;
+
+  if(progress() + _bufferLen + len > _size) {
+    _setError(UPDATE_ERROR_SPACE);
+    return 0;
+  }
+
+  size_t pos = 0;
+  while (pos < len) {
+    size_t read_size;
+    if ((len - pos) > _bufferSize)
+      read_size = _bufferSize;
+    else
+      read_size = len - pos;
+
+    ESP.flashRead(_currentAddress, _buffer, read_size);
+
+    for (size_t i=0; i < read_size; i++) {
+      //#ifdef DEBUG_UPDATER
+      //  if ((i & 0x0f) == 0x0)
+      //    DEBUG_UPDATER.printf_P(PSTR("\n%08x: "), _currentAddress);
+      //  DEBUG_UPDATER.printf_P(PSTR("%02X "), _buffer[i]);
+      //#endif
+       
+      if (data[pos] != _buffer[i]) {
+        _verifyAddress = _currentAddress;
+        _verifyExpect = data[pos];
+        _verifyGot = _buffer[i];
+        _setError(UPDATE_ERROR_VERIFY);
+        return pos;
+      }
+      pos++;
+      _currentAddress++;
+    }
+    _md5.add(_buffer, read_size);
+  }
+  return len;
+}
+
 bool UpdaterClass::_verifyHeader(uint8_t data) {
     if(_command == U_FLASH) {
         // check for valid first magic byte (is always 0xE9)
@@ -648,6 +689,14 @@ String UpdaterClass::getErrorString() const {
     break;
   case UPDATE_ERROR_OOM:
     out = F("Out of memory");
+    break;
+  case UPDATE_ERROR_VERIFY:
+    out = F("Verify fail at ");
+    out += String(_verifyAddress, 16);
+    out += F(": expected ");
+    out += String(_verifyExpect, 16);
+    out += F(", Got ");
+    out += String(_verifyGot, 16);
     break;
   default:
     out = F("UNKNOWN");

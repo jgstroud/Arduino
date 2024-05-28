@@ -21,6 +21,7 @@
 #define UPDATE_ERROR_SIGN               (12)
 #define UPDATE_ERROR_NO_DATA            (13)
 #define UPDATE_ERROR_OOM                (14)
+#define UPDATE_ERROR_VERIFY             (15)
 
 #define U_FLASH   0
 #define U_FS      100
@@ -78,6 +79,7 @@ class UpdaterClass {
       Returns the amount written
     */
     size_t write(uint8_t *data, size_t len);
+    size_t rawVerify(uint8_t *data, size_t len);
 
     /*
       Writes the remaining bytes from the Stream to the flash
@@ -227,6 +229,9 @@ class UpdaterClass {
     uint32_t _startAddress = 0;
     uint32_t _currentAddress = 0;
     uint32_t _command = U_FLASH;
+    uint32_t _verifyAddress;
+    uint8_t  _verifyExpect;
+    uint8_t  _verifyGot;
 
     String _target_md5;
     MD5Builder _md5;
