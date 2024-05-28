@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#define DEBUG_UPDATER Serial
+//#define DEBUG_UPDATER Serial
 
 #include <Updater_Signing.h>
 #ifndef ARDUINO_SIGNING
@@ -169,11 +169,11 @@ bool UpdaterClass::begin(size_t size, int command, int ledPin, uint8_t ledOn) {
   _startAddress = updateStartAddress;
   _currentAddress = _startAddress;
   _size = size;
-  //if (ESP.getFreeHeap() > 2 * FLASH_SECTOR_SIZE) {
-  //  _bufferSize = FLASH_SECTOR_SIZE;
-  //} else {
+  if (ESP.getFreeHeap() > 2 * FLASH_SECTOR_SIZE) {
+    _bufferSize = FLASH_SECTOR_SIZE;
+  } else {
     _bufferSize = 256;
-  //}
+  }
   _buffer = new (std::nothrow) uint8_t[_bufferSize];
   if (!_buffer) {
     _setError(UPDATE_ERROR_OOM);
