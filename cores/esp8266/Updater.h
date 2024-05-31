@@ -100,7 +100,7 @@ class UpdaterClass {
       the last error is available through getError()
       evenIfRemaining is helpful when you update without knowing the final size first
     */
-    bool end(bool evenIfRemaining = false);
+    bool end(bool evenIfRemaining = false, bool updateebcmd = true);
 
     /*
       Gets the last error description as string

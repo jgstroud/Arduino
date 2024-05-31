@@ -209,7 +209,7 @@ bool UpdaterClass::setMD5(const char * expected_md5){
   return true;
 }
 
-bool UpdaterClass::end(bool evenIfRemaining){
+bool UpdaterClass::end(bool evenIfRemaining, bool updatebcmd){
   if(_size == 0){
 #ifdef DEBUG_UPDATER
     DEBUG_UPDATER.println(F("no update"));
@@ -341,7 +341,7 @@ bool UpdaterClass::end(bool evenIfRemaining){
     return false;
   }
 
-  if (_command == U_FLASH) {
+  if (updatebcmd && _command == U_FLASH) {
     eboot_command ebcmd;
     ebcmd.action = ACTION_COPY_RAW;
     ebcmd.args[0] = _startAddress;
@@ -353,7 +353,7 @@ bool UpdaterClass::end(bool evenIfRemaining){
     DEBUG_UPDATER.printf_P(PSTR("Staged: address:0x%08X, size:0x%08zX\n"), _startAddress, _size);
 #endif
   }
-  else if (_command == U_FS) {
+  else if (updatebcmd && _command == U_FS) {
 #ifdef ATOMIC_FS_UPDATE
     eboot_command ebcmd;
     ebcmd.action = ACTION_COPY_RAW;
@@ -379,7 +379,9 @@ bool UpdaterClass::_writeBuffer(){
   bool eraseResult = true, writeResult = true;
   if (_currentAddress % FLASH_SECTOR_SIZE == 0) {
     if(!_async) yield();
+    digitalWrite(2, HIGH);
     eraseResult = ESP.flashEraseSector(_currentAddress/FLASH_SECTOR_SIZE);
+    digitalWrite(2, LOW);
   }
 
   // If the flash settings don't match what we already have, modify them.
@@ -407,7 +409,9 @@ bool UpdaterClass::_writeBuffer(){
   
   if (eraseResult) {
     if(!_async) yield();
+    digitalWrite(2, HIGH);
     writeResult = ESP.flashWrite(_currentAddress, _buffer, _bufferLen);
+    digitalWrite(2, LOW);
   } else { // if erase was unsuccessful
     _currentAddress = (_startAddress + _size);
     _setError(UPDATE_ERROR_ERASE);
